@@ -66,6 +66,22 @@ class SystemState extends ChangeNotifier {
   bool get emergencyActive => _emergencyActive;
 
   // ---------------------------------------------------------------------------
+  // Detected Location (set by LocationDetectionScreen after mock GPS)
+  // ---------------------------------------------------------------------------
+
+  CampusNode? _detectedLocation;
+
+  /// The campus node that was auto-detected via mock GPS simulation.
+  CampusNode? get detectedLocation => _detectedLocation;
+
+  /// Called by [LocationDetectionScreen] after mock detection completes.
+  void setDetectedLocation(CampusNode node) {
+    _detectedLocation = node;
+    _selectedLocation = node;
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------------
   // Activity Feed
   // ---------------------------------------------------------------------------
 
@@ -201,6 +217,7 @@ class SystemState extends ChangeNotifier {
   void resetState() {
     _selectedEmergencyType = null;
     _selectedLocation = null;
+    _detectedLocation = null;
     _currentRoute = null;
     _currentStatus = AlertStatus.pending;
     _emergencyActive = false;

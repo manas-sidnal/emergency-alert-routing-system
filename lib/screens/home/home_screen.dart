@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../models/emergency_alert.dart';
-
 import '../../theme/app_theme.dart';
 import '../../widgets/sos_button.dart';
-import '../../widgets/emergency_type_card.dart';
-import '../../widgets/status_banner.dart';
-import '../emergency/emergency_trigger_screen.dart';
+import '../location/location_detection_screen.dart';
 
-/// Home Screen — main landing screen for emergency access.
+/// Home Screen — distraction-free emergency landing screen.
 ///
 /// Features:
-///   - App header with system status
-///   - Emergency warning banner
-///   - Large pulsing SOS button
-///   - Quick emergency type shortcuts
-///   - System readiness indicator
+///   - App header with live system status badge
+///   - Large centered pulsing SOS button (primary focus)
+///   - Concise operational system status section
+///
+/// Design intent: Every element is optimized for emergency situations.
+/// The user should press SOS within 2 seconds of opening the app.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -26,19 +23,16 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(context),
+            _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
                 padding: AppTheme.screenPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildWarningBanner(),
-                    const SizedBox(height: AppTheme.spacingXL),
+                    const SizedBox(height: AppTheme.spacingMD),
                     _buildSOSSection(context),
                     const SizedBox(height: AppTheme.spacingXL),
-                    _buildQuickEmergencySection(context),
-                    const SizedBox(height: AppTheme.spacingLG),
                     _buildSystemStatus(),
                     const SizedBox(height: AppTheme.spacingLG),
                   ],
@@ -55,7 +49,7 @@ class HomeScreen extends StatelessWidget {
   // Header
   // ---------------------------------------------------------------------------
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: const BoxDecoration(
@@ -70,7 +64,7 @@ class HomeScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.alertRed.withOpacity(0.15),
+              color: AppTheme.alertRed.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -104,14 +98,14 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          // System ready indicator
+          // Live system ready indicator
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: AppTheme.safeGreen.withOpacity(0.1),
+              color: AppTheme.safeGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppTheme.safeGreen.withOpacity(0.3),
+                color: AppTheme.safeGreen.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -145,40 +139,42 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ---------------------------------------------------------------------------
-  // Warning Banner
-  // ---------------------------------------------------------------------------
-
-  Widget _buildWarningBanner() {
-    return AlertBanner(
-      message:
-          'Campus Emergency Routing Active — System Ready for Deployment',
-      color: AppTheme.warningAmber,
-      icon: Icons.warning_amber_rounded,
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // SOS Section
+  // SOS Section — primary focus of the screen
   // ---------------------------------------------------------------------------
 
   Widget _buildSOSSection(BuildContext context) {
     return Column(
       children: [
-        Center(
-          child: SosButton(
-            onPressed: () => _navigateToEmergency(context, null),
-            size: 170,
-          ),
-        ),
-        const SizedBox(height: 20),
+        // Subtitle above button
         Center(
           child: Text(
-            'Press SOS to trigger emergency alert\nand get evacuation route instantly',
+            'CAMPUS EMERGENCY',
+            style: GoogleFonts.inter(
+              color: AppTheme.alertRed.withValues(alpha: 0.7),
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 3,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingXL),
+        // Large SOS button — the hero element
+        Center(
+          child: SosButton(
+            onPressed: () => _onSOSPressed(context),
+            size: 180,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingLG),
+        // Helper text
+        Center(
+          child: Text(
+            'Press SOS — system will auto-detect\nyour campus location and generate\nthe fastest evacuation route.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               color: AppTheme.textSecondary,
               fontSize: 13,
-              height: 1.6,
+              height: 1.7,
             ),
           ),
         ),
@@ -187,147 +183,111 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ---------------------------------------------------------------------------
-  // Quick Emergency Selection
-  // ---------------------------------------------------------------------------
-
-  Widget _buildQuickEmergencySection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionLabel('QUICK EMERGENCY'),
-        const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.35,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: EmergencyType.values
-              .map(
-                (type) => EmergencyTypeCard(
-                  type: type,
-                  compact: true,
-                  onTap: () => _navigateToEmergency(context, type),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // System Status Footer
+  // System Status — clean operational display
   // ---------------------------------------------------------------------------
 
   Widget _buildSystemStatus() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: AppTheme.cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionLabel('SYSTEM STATUS'),
+          // Section label
+          Text(
+            'SYSTEM STATUS',
+            style: GoogleFonts.inter(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Operational status items
+          _statusItem(Icons.route_rounded,          'Routing Engine Active'),
+          _statusItem(Icons.exit_to_app_rounded,    'Safe Exits Available'),
+          _statusItem(Icons.wifi_tethering_rounded, 'Emergency Network Ready'),
+          _statusItem(Icons.queue_rounded,          'Alert Queue Operational'),
           const SizedBox(height: 14),
-          _statusRow(
-            Icons.account_tree_rounded,
-            'Campus Graph',
-            '12 nodes · 20 edges loaded',
-            AppTheme.safeGreen,
-          ),
-          const SizedBox(height: 10),
-          _statusRow(
-            Icons.route_rounded,
-            'Routing Engine',
-            'Dijkstra\'s Algorithm — Active',
-            AppTheme.safeGreen,
-          ),
-          const SizedBox(height: 10),
-          _statusRow(
-            Icons.exit_to_app_rounded,
-            'Safe Exits',
-            'Main Gate · Back Gate · Sports Ground',
-            AppTheme.infoBlue,
-          ),
-          const SizedBox(height: 10),
-          _statusRow(
-            Icons.queue_rounded,
-            'Alert Queue',
-            'Ready · 0 pending alerts',
-            AppTheme.safeGreen,
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          // Subtle DSA footer
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.data_object_rounded,
+                color: AppTheme.textMuted,
+                size: 12,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                "Powered by Dijkstra's Shortest Path Algorithm",
+                style: GoogleFonts.inter(
+                  color: AppTheme.textMuted,
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _statusRow(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+  /// A single status row with a green dot indicator.
+  Widget _statusItem(IconData icon, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          // Green dot
+          Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.safeGreen,
+            ),
           ),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+          const SizedBox(width: 12),
+          Icon(icon, color: AppTheme.textSecondary, size: 15),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  Widget _sectionLabel(String text) {
-    return Text(
-      text,
-      style: GoogleFonts.inter(
-        color: AppTheme.textMuted,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 2,
+        ],
       ),
     );
   }
 
-  void _navigateToEmergency(BuildContext context, EmergencyType? preselected) {
+  // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
+
+  /// Navigates to the location detection loading screen.
+  /// The SOS flow: Home → LocationDetection → EmergencyTrigger → Status → Route
+  void _onSOSPressed(BuildContext context) {
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (_, animation, __) => EmergencyTriggerScreen(
-          preselectedType: preselected,
-        ),
+        pageBuilder: (_, animation, __) => const LocationDetectionScreen(),
         transitionsBuilder: (_, animation, __, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
+          return FadeTransition(
+            opacity: CurvedAnimation(
               parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
+              curve: Curves.easeOut,
+            ),
             child: child,
           );
         },
-        transitionDuration: const Duration(milliseconds: 350),
+        transitionDuration: const Duration(milliseconds: 300),
       ),
     );
   }

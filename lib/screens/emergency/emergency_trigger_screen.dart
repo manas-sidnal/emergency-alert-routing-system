@@ -5,48 +5,34 @@ import '../../models/emergency_alert.dart';
 import '../../state/system_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/emergency_type_card.dart';
-import '../../core/mock_campus_data.dart';
 import '../route/route_guidance_screen.dart';
 import '../status/emergency_status_screen.dart';
 
-/// Emergency Trigger Screen — user selects emergency type and location.
+/// Emergency Trigger Screen — user confirms emergency type after auto-location.
 ///
 /// Features:
-///   - Emergency type selection cards (full layout)
-///   - Campus location dropdown
-///   - Danger level indicator
-///   - Emergency description field (mock)
+///   - Detected location status card (auto-filled by LocationDetectionScreen)
+///   - Emergency type selection cards
+///   - Emergency details (description + mock notes field)
+///   - Danger level assessment indicator
 ///   - Trigger SOS Alert button
+///
+/// The location dropdown has been removed — location is always auto-detected.
 class EmergencyTriggerScreen extends StatefulWidget {
-  final EmergencyType? preselectedType;
-
-  const EmergencyTriggerScreen({
-    super.key,
-    this.preselectedType,
-  });
+  const EmergencyTriggerScreen({super.key});
 
   @override
-  State<EmergencyTriggerScreen> createState() =>
-      _EmergencyTriggerScreenState();
+  State<EmergencyTriggerScreen> createState() => _EmergencyTriggerScreenState();
 }
 
 class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
   EmergencyType? _selectedType;
-  CampusNode? _selectedLocation;
   bool _isTriggering = false;
-
-  final List<CampusNode> _locations = MockCampusData.selectableLocations;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedType = widget.preselectedType;
-    _selectedLocation = _locations.first;
-  }
 
   @override
   Widget build(BuildContext context) {
     final state = SystemStateProvider.of(context);
+    final detectedNode = state.detectedLocation;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -54,24 +40,24 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top alert strip
+            // Dynamic type-color banner strip when a type is selected
             if (_selectedType != null) _buildTypeAlertStrip(),
-            // Scrollable content
             Expanded(
               child: SingleChildScrollView(
                 padding: AppTheme.screenPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- Detected location card (replaces manual dropdown) ---
+                    if (detectedNode != null) ...[
+                      _buildDetectedLocationCard(detectedNode),
+                      const SizedBox(height: AppTheme.spacingLG),
+                    ],
                     _sectionLabel('SELECT EMERGENCY TYPE'),
                     const SizedBox(height: 12),
                     _buildTypeSelection(),
-                    const SizedBox(height: AppTheme.spacingLG),
-                    _sectionLabel('CURRENT CAMPUS LOCATION'),
-                    const SizedBox(height: 12),
-                    _buildLocationDropdown(),
-                    const SizedBox(height: AppTheme.spacingLG),
                     if (_selectedType != null) ...[
+                      const SizedBox(height: AppTheme.spacingLG),
                       _sectionLabel('EMERGENCY DETAILS'),
                       const SizedBox(height: 12),
                       _buildEmergencyDetails(),
@@ -79,9 +65,8 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
                       _sectionLabel('DANGER ASSESSMENT'),
                       const SizedBox(height: 12),
                       _buildDangerIndicator(),
-                      const SizedBox(height: AppTheme.spacingXL),
                     ],
-                    const SizedBox(height: 80), // space for button
+                    const SizedBox(height: 100), // space for bottom button
                   ],
                 ),
               ),
@@ -107,7 +92,7 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Trigger Emergency',
+            'Confirm Emergency',
             style: GoogleFonts.inter(
               color: AppTheme.textPrimary,
               fontSize: 17,
@@ -115,7 +100,7 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
             ),
           ),
           Text(
-            'Configure and activate SOS alert',
+            'Location detected — select emergency type',
             style: GoogleFonts.inter(
               color: AppTheme.textMuted,
               fontSize: 11,
@@ -128,11 +113,86 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
           padding: const EdgeInsets.only(right: 16),
           child: Icon(
             Icons.emergency_rounded,
-            color: AppTheme.alertRed.withOpacity(0.7),
+            color: AppTheme.alertRed.withValues(alpha: 0.7),
             size: 22,
           ),
         ),
       ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Detected Location Card
+  // ---------------------------------------------------------------------------
+
+  Widget _buildDetectedLocationCard(CampusNode node) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: AppTheme.safeDecoration(),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.safeGreen.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.location_on_rounded,
+              color: AppTheme.safeGreen,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CURRENT LOCATION DETECTED',
+                  style: GoogleFonts.inter(
+                    color: AppTheme.safeGreen,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  node.name,
+                  style: GoogleFonts.inter(
+                    color: AppTheme.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // "Auto" badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.safeGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppTheme.safeGreen.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              'AUTO',
+              style: GoogleFonts.inter(
+                color: AppTheme.safeGreen,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -145,17 +205,21 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      color: type.color.withOpacity(0.1),
+      color: type.color.withValues(alpha: 0.1),
       child: Row(
         children: [
-          Icon(type.icon, color: type.color, size: 16),
+          Icon(type.icon, color: type.color, size: 15),
           const SizedBox(width: 8),
-          Text(
-            '${type.label} emergency selected — ${type.description}',
-            style: TextStyle(
-              color: type.color,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              '${type.label} — ${type.description}',
+              style: TextStyle(
+                color: type.color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -183,50 +247,6 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Location Dropdown
-  // ---------------------------------------------------------------------------
-
-  Widget _buildLocationDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: AppTheme.cardDecoration(),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<CampusNode>(
-          value: _selectedLocation,
-          isExpanded: true,
-          dropdownColor: AppTheme.surfaceAlt,
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: AppTheme.textSecondary,
-          ),
-          style: GoogleFonts.inter(
-            color: AppTheme.textPrimary,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-          items: _locations.map((node) {
-            return DropdownMenuItem<CampusNode>(
-              value: node,
-              child: Row(
-                children: [
-                  Icon(
-                    _nodeIcon(node.type),
-                    color: AppTheme.infoBlue,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(node.name),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: (node) => setState(() => _selectedLocation = node),
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
   // Emergency Details
   // ---------------------------------------------------------------------------
 
@@ -234,7 +254,7 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: AppTheme.cardDecoration(
-        borderColor: _selectedType!.color.withOpacity(0.3),
+        borderColor: _selectedType!.color.withValues(alpha: 0.3),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +268,7 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          // Mock description field
+          // Mock description input
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -258,18 +278,11 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.notes_rounded,
-                  color: AppTheme.textMuted,
-                  size: 16,
-                ),
+                const Icon(Icons.notes_rounded, color: AppTheme.textMuted, size: 16),
                 const SizedBox(width: 10),
                 Text(
                   'Add additional description (optional)...',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
                 ),
               ],
             ),
@@ -315,6 +328,7 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
             ],
           ),
           const SizedBox(height: 10),
+          // Segmented bar
           Row(
             children: List.generate(5, (i) {
               return Expanded(
@@ -324,9 +338,7 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
                     duration: const Duration(milliseconds: 300),
                     height: 6,
                     decoration: BoxDecoration(
-                      color: i < level
-                          ? color
-                          : AppTheme.borderColor,
+                      color: i < level ? color : AppTheme.borderColor,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -357,51 +369,47 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildTriggerButton(BuildContext context, SystemState state) {
-    final canTrigger = _selectedType != null && _selectedLocation != null;
+    // Can trigger only when an emergency type is selected AND a location is detected
+    final canTrigger =
+        _selectedType != null && state.detectedLocation != null;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.surface,
-        border: const Border(
-          top: BorderSide(color: AppTheme.borderColor, width: 1),
-        ),
+        border: Border(top: BorderSide(color: AppTheme.borderColor, width: 1)),
       ),
       child: SizedBox(
         width: double.infinity,
         height: 56,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          child: ElevatedButton.icon(
-            onPressed: canTrigger && !_isTriggering
-                ? () => _triggerSOS(context, state)
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  canTrigger ? AppTheme.alertRed : AppTheme.surfaceAlt,
-              disabledBackgroundColor: AppTheme.surfaceAlt,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+        child: ElevatedButton.icon(
+          onPressed: canTrigger && !_isTriggering
+              ? () => _triggerSOS(context, state)
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: canTrigger ? AppTheme.alertRed : AppTheme.surfaceAlt,
+            disabledBackgroundColor: AppTheme.surfaceAlt,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            icon: _isTriggering
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Icon(Icons.sos_rounded, color: Colors.white, size: 22),
-            label: Text(
-              _isTriggering ? 'COMPUTING ROUTE...' : 'TRIGGER SOS ALERT',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
-              ),
+          ),
+          icon: _isTriggering
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.sos_rounded, color: Colors.white, size: 22),
+          label: Text(
+            _isTriggering ? 'COMPUTING ROUTE...' : 'TRIGGER SOS ALERT',
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1,
             ),
           ),
         ),
@@ -414,14 +422,14 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _triggerSOS(BuildContext context, SystemState state) async {
-    if (_selectedType == null || _selectedLocation == null) return;
+    if (_selectedType == null || state.detectedLocation == null) return;
 
     setState(() => _isTriggering = true);
 
-    // Capture navigator before any async gap
+    // Capture navigator before async gap
     final nav = Navigator.of(context);
 
-    // Navigate to status screen immediately
+    // Navigate to status screen immediately to show processing
     nav.push(
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const EmergencyStatusScreen(),
@@ -436,12 +444,12 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
     // Run Dijkstra + state updates
     await state.triggerSOS(
       type: _selectedType!,
-      location: _selectedLocation!,
+      location: state.detectedLocation!,
     );
 
     if (mounted) setState(() => _isTriggering = false);
 
-    // Navigate to route guidance if route found
+    // Auto-navigate to route guidance if route was found
     if (state.currentRoute?.routeFound == true && mounted) {
       nav.push(
         PageRouteBuilder(
@@ -476,22 +484,5 @@ class _EmergencyTriggerScreenState extends State<EmergencyTriggerScreen> {
         letterSpacing: 2,
       ),
     );
-  }
-
-  IconData _nodeIcon(NodeType type) {
-    switch (type) {
-      case NodeType.building:
-        return Icons.business_rounded;
-      case NodeType.exit:
-        return Icons.exit_to_app_rounded;
-      case NodeType.hostel:
-        return Icons.hotel_rounded;
-      case NodeType.medical:
-        return Icons.local_hospital_rounded;
-      case NodeType.parking:
-        return Icons.local_parking_rounded;
-      case NodeType.gate:
-        return Icons.sensor_door_rounded;
-    }
   }
 }
